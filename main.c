@@ -1,6 +1,6 @@
 #include "raylib.h"
 
-enum { ROWS = 50, COLS = 50, CELL_SIZE = 10 };
+enum { ROWS = 100, COLS = 100, CELL_SIZE = 25 };
 
 // Because the evaluation of a generation happens in one step, I think is easier
 // to use a swapping mechanism and keep two grids all the time. We do the
@@ -8,6 +8,8 @@ enum { ROWS = 50, COLS = 50, CELL_SIZE = 10 };
 // swap them once the loop is over before painting.
 int now[ROWS][COLS] = {0};
 int next[ROWS][COLS] = {0};
+int (*nowp)[COLS] = now;
+int (*nextp)[COLS] = next;
 
 /*
  * The position we get is the 0,0 so we need to evaluate how many alive cells
@@ -38,8 +40,33 @@ void update(void) {
 	for (int row = 0; row < ROWS; row++) {
 		for (int col = 0; col < COLS; col++) {
 			int alive = alive_in_the_neighborhood(row, col);
+			int isAlive = nowp[row][col];
+			// Any live cell with fewer than two live neighbours dies, as if
+			// caused by underpopulation.
+			if (isAlive && alive < 2) {
+				nextp[row][col] = 0;
+			}
+			// Any live cell with two or three live neighbours lives on to the
+			// next generation.
+			if (isAlive && (alive == 2 || alive == 3)) {
+				nextp[row][col] = 1;
+			}
+			// Any live cell with more than three live neighbours dies, as if by
+			// overpopulation.
+			if (isAlive && alive > 3) {
+				nextp[row][col] = 0;
+			}
+			// Any dead cell with exactly three live neighbours becomes a live
+			// cell, as if by reproduction.
+			if (!isAlive && alive == 3) {
+				nextp[row][col] = 1;
+			}
 		}
 	}
+	// Swap the grids!
+	int (*t)[COLS] = nowp;
+	nowp = nextp;
+	nextp = t;
 }
 
 void draw(bool showGrid) {
@@ -104,7 +131,7 @@ int main(void) {
 	// Seed some initial live cells
 	for (int r = 0; r < ROWS; r++) {
 		for (int c = 0; c < COLS; c++) {
-			now[r][c] = (GetRandomValue(0, 4) == 0) ? 1 : 0;
+			now[r][c] = (GetRandomValue(0, 10) == 0) ? 1 : 0;
 		}
 	}
 	while (!WindowShouldClose()) {
