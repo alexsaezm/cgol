@@ -1,6 +1,6 @@
 #include "raylib.h"
 
-enum { ROWS = 100, COLS = 100, CELL_SIZE = 25 };
+enum { ROWS = 100, COLS = 100 };
 
 // Because the evaluation of a generation happens in one step, I think is easier
 // to use a swapping mechanism and keep two grids all the time. We do the
@@ -22,14 +22,18 @@ int (*nextp)[COLS] = next;
 int alive_in_the_neighborhood(int row, int col) {
 	int alive = 0;
 	for (int x = -1; x <= 1; x++) {
-		for (int y = 0; y <= 1; y++) {
+		for (int y = -1; y <= 1; y++) {
+			if (x == 0 && y == 0) {
+				continue;
+			}
+
 			// the real coordinates
 			int r = row + x;
 			int c = col + y;
 
 			// out of bounds check
-			if (r >= 0 && r <= ROWS && c >= 0 && c <= COLS) {
-				alive += now[r][c];
+			if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+				alive += nowp[r][c];
 			}
 		}
 	}
@@ -41,6 +45,7 @@ void update(void) {
 		for (int col = 0; col < COLS; col++) {
 			int alive = alive_in_the_neighborhood(row, col);
 			int isAlive = nowp[row][col];
+			nextp[row][col] = 0;
 			// Any live cell with fewer than two live neighbours dies, as if
 			// caused by underpopulation.
 			if (isAlive && alive < 2) {
@@ -91,6 +96,16 @@ void draw(bool showGrid) {
 	BeginDrawing();
 	ClearBackground(BLACK);
 
+	for (int row = 0; row < ROWS; row++) {
+		for (int col = 0; col < COLS; col++) {
+			if (nowp[row][col] == 1) {
+				DrawRectangle((int)(offsetX + col * cellSize),
+							  (int)(offsetY + row * cellSize), (int)cellSize,
+							  (int)cellSize, RAYWHITE);
+			}
+		}
+	}
+
 	if (showGrid) {
 		for (int row = 0; row <= ROWS; row++) {
 			float y = offsetY + row * cellSize;
@@ -128,6 +143,7 @@ int main(void) {
 	SetTargetFPS(60);
 
 	bool showGrid = false;
+	double nextUpdate = GetTime();
 	// Seed some initial live cells
 	for (int r = 0; r < ROWS; r++) {
 		for (int c = 0; c < COLS; c++) {
@@ -139,23 +155,11 @@ int main(void) {
 			showGrid = !showGrid;
 		}
 
-		update();
-		// TODO go back to the normal size of cells
-		// draw(showGrid);
-		//
-
-		// This is way simplier right now for paiting and seeing if it works
-		BeginDrawing();
-		ClearBackground(BLACK);
-		for (int r = 0; r < ROWS; r++) {
-			for (int c = 0; c < COLS; c++) {
-				if (now[r][c] == 1) {
-					DrawRectangle(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE - 1,
-								  CELL_SIZE - 1, RAYWHITE);
-				}
-			}
+		if (GetTime() >= nextUpdate) {
+			update();
+			nextUpdate = GetTime() + 0.1;
 		}
-		EndDrawing();
+		draw(showGrid);
 	}
 
 	CloseWindow();
