@@ -74,14 +74,12 @@ void update(void) {
 	nextp = t;
 }
 
-void draw(bool showGrid) {
+void draw(int generation) {
 	int width = GetScreenWidth();
 	int height = GetScreenHeight();
-
-	const int footerHeight = 40;
-	const int fontSize = 20;
-
-	int availableHeight = height - footerHeight;
+	const int headerHeight = 40;
+	const int fontSize = 24;
+	int availableHeight = height - headerHeight;
 
 	float cellWidth = (float)width / COLS;
 	float cellHeight = (float)availableHeight / ROWS;
@@ -91,42 +89,27 @@ void draw(bool showGrid) {
 	float gridHeight = ROWS * cellSize;
 
 	float offsetX = (width - gridWidth) / 2.0f;
-	float offsetY = (availableHeight - gridHeight) / 2.0f;
+	float offsetY = headerHeight + (availableHeight - gridHeight) / 2.0f;
 
 	BeginDrawing();
 	ClearBackground(BLACK);
 
+	int aliveCells = 0;
 	for (int row = 0; row < ROWS; row++) {
 		for (int col = 0; col < COLS; col++) {
 			if (nowp[row][col] == 1) {
+				aliveCells++;
 				DrawRectangle((int)(offsetX + col * cellSize),
 							  (int)(offsetY + row * cellSize), (int)cellSize,
 							  (int)cellSize, RAYWHITE);
 			}
 		}
 	}
-
-	if (showGrid) {
-		for (int row = 0; row <= ROWS; row++) {
-			float y = offsetY + row * cellSize;
-
-			DrawLine((int)offsetX, (int)y, (int)(offsetX + gridWidth), (int)y,
+	DrawRectangleLinesEx((Rectangle){offsetX, offsetY, gridWidth, gridHeight}, 1,
 					 LIGHTGRAY);
-		}
-
-		for (int col = 0; col <= COLS; col++) {
-			float x = offsetX + col * cellSize;
-
-			DrawLine((int)x, (int)offsetY, (int)x, (int)(offsetY + gridHeight),
-					 LIGHTGRAY);
-		}
-	}
-
-	const char *legend = "[G] Show/hide grid";
-	int legendWidth = MeasureText(legend, fontSize);
-
-	DrawText(legend, (width - legendWidth) / 2,
-			 height - footerHeight + (footerHeight - fontSize) / 2, fontSize,
+	const char *legend = TextFormat("Generation: %d  Alive: %d", generation,
+								 aliveCells);
+	DrawText(legend, (int)offsetX, (headerHeight - fontSize) / 2, fontSize,
 			 LIGHTGRAY);
 
 	EndDrawing();
@@ -142,24 +125,21 @@ int main(void) {
 
 	SetTargetFPS(60);
 
-	bool showGrid = false;
 	double nextUpdate = GetTime();
+	int generation = 0;
 	// Seed some initial live cells
 	for (int r = 0; r < ROWS; r++) {
 		for (int c = 0; c < COLS; c++) {
-			now[r][c] = (GetRandomValue(0, 10) == 0) ? 1 : 0;
+			now[r][c] = (GetRandomValue(0, 4) == 0) ? 1 : 0;
 		}
 	}
 	while (!WindowShouldClose()) {
-		if (IsKeyPressed(KEY_G)) {
-			showGrid = !showGrid;
-		}
-
 		if (GetTime() >= nextUpdate) {
 			update();
+			generation++;
 			nextUpdate = GetTime() + 0.1;
 		}
-		draw(showGrid);
+		draw(generation);
 	}
 
 	CloseWindow();
